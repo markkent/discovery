@@ -6,12 +6,7 @@ require 'pp'
 
 describe "DiscoverClient Tests" do
 
-###
-### Initialization
-###
-
-  
-  DISCOVERY_URLS = ["http://discovery.example.com:1234", "http://zappdev1.eng.proofpoint.com:4111"]
+  DISCOVERY_URLS = ["http://discovery.bogustld:1234", "http://zappdev1.eng.proofpoint.com:4111"]
   @logger = Logger.new(STDOUT)
   @logger.level = Logger::DEBUG
 

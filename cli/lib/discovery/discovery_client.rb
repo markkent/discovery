@@ -22,16 +22,13 @@ module Discovery
     def initialize(params)
        @discovery_urls = params[:DISCOVERY_URLS]
        raise "Must specify list of discovery service URLS" if @discovery_urls.nil?
+
        @logger = params[:LOGGER]
        if @logger.nil?
          @logger = Logger.new(STDOUT)
-         level = params[:VERBOSITY]
-         level ||= Logger::UNKNOWN
-         @logger.level = level
+         @logger.level = params[:VERBOSITY].nil? ? Logger::UNKNOWN : params[:VERBOSITY]
        end
 
-       @services = nil
-       @service_data = nil
        @client = HTTPClient.new("")
     end
 
@@ -47,10 +44,10 @@ module Discovery
       #       which is not an available resource path
 
       if !pool.nil? && type.nil?
-        query_for_services()
+        service_data = query_for_services()
         result = []
 
-        @service_data['services'].each do |service|
+        service_data['services'].each do |service|
           if type.nil? || service['type'].eql?(type)
             result << service if pool.nil? || service['pool'].eql?(pool)
           end
@@ -59,16 +56,17 @@ module Discovery
         return result
       end
 
-      query_for_services(type, pool)
-      return @service_data["services"]
+      service_data = query_for_services(type, pool)
+      return service_data["services"]
     end
 
     #
     # Return a list of HTTP paths for the given service
     #
     def get_http_services (service_name)
-      query_for_services()
-      list = @services[service_name]
+      service_data = query_for_services()
+      services = sort_services(service_data)
+      list = services[service_name]
 
       http_service = []
       list.each do |service|
@@ -86,8 +84,9 @@ module Discovery
     # Return a list of JDBC paths for the given service
     #
     def get_jdbc_services (service_name)
-      query_for_services()
-      list = @services[service_name]
+      services_data = query_for_services()
+      services = sort_services(service_data)
+      list = services[service_name]
 
       jdbc_service = []
       list.each do |service|
@@ -105,8 +104,8 @@ module Discovery
     # Return the Discovery environment name
     #
     def get_environment ()
-      query_for_services()
-      return @service_data["environment"]
+      service_data = query_for_services()
+      return service_data["environment"]
     end
 
     #
@@ -140,7 +139,7 @@ module Discovery
 
       end
 
-      raise "Failed to do business with any of [ #{@discovery_urls.join(",")} ]"
+      raise "Failed to get static services from any of [ #{@discovery_urls.join(",")} ]"
     end
 
     #
@@ -149,11 +148,11 @@ module Discovery
     #
     #    Params - a single hash containing the following elements:
     #
-    #    :pool                The pool for this service
-    #    :environment         The service environment
-    #    :type                The service type, e. g. smtp_service, user, customer, etc.
-    #    :properties          A hashmap of the service properties
-    #    :location            Service location
+    #    :pool                The pool for this service, can not be nil
+    #    :environment         The service environment, can not be nil
+    #    :type                The service type, e. g. smtp_service, user, customer, etc., can not be nil
+    #    :properties          A hashmap of the service properties, can not be nil
+    #    :location            Service location, can be nil, a default will be provided by the server.
     #
     #    Return
     #
@@ -166,7 +165,6 @@ module Discovery
       assertion_fails << "params[:environment] must not be nil" if params[:environment].nil?
       assertion_fails << "params[:type] must not be nil" if params[:type].nil?
       assertion_fails << "params[:properties] must not be nil" if params[:properties].nil?
-      assertion_fails << "params[:location] must not be nil" if params[:location].nil?
 
       raise assertion_fails.join(",") if assertion_fails.size > 0
 
@@ -200,7 +198,7 @@ module Discovery
         end
       end
 
-      raise "Failed to do business with any of [ #{@discovery_urls.join(",")} ]"
+      raise "Failed to make static announcement on any of [ #{@discovery_urls.join(",")} ]"
 
     end
 
@@ -232,12 +230,30 @@ module Discovery
 
       end
 
-      raise "Failed to do business with any of [ #{@discovery_urls.join(",")} ]"
+      raise "Failed to delete static announcement #{nodeId} on any of [ #{@discovery_urls.join(",")} ]"
 
     end
 
 
     private
+
+    #
+    # Takes the raw service hash returned by query_for_services or get_static_services
+    # and sorts it into a map indexed by service name
+    #
+    def sort_services(service_data)
+      services = {}
+
+      service_data["services"].each do |service|
+        service_type = service["type"]
+        if services[service_type].nil?
+          services[service_type] = [service]
+        else
+          services[service_type] << service
+        end
+      end
+      return services
+    end
 
     #
     # GET the contents of the discovery service
@@ -262,19 +278,9 @@ module Discovery
           response = @client.get(service_uri.to_s, nil, nil)
 
           if response.status >= 200 && response.status <= 299
-             @service_data = JSON.parse(response.body)
-             @services = {}
+             service_data = JSON.parse(response.body)
 
-             @service_data["services"].each do |service|
-               service_type = service["type"]
-               if @services[service_type].nil?
-                 @services[service_type] = [service]
-               else
-                 @services[service_type] << service
-               end
-             end
-
-             return
+             return service_data
           end
 
           @logger.error("#{service_uri.to_s}: Response Status #{response.status}")
@@ -286,7 +292,7 @@ module Discovery
 
     end
 
-      raise "Failed to do business with any of [ #{@discovery_urls.join(",")} ]"
+      raise "Failed to get all services from any of [ #{@discovery_urls.join(",")} ]"
 
     end
 
