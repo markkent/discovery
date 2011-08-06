@@ -72,18 +72,20 @@ class DDiscoveryCommand
   # Shift off one argument and parse it as an alias in .discoveryrc or a hostname
   # Set result in @hosts array
   def parse_hosts (args)
-    return if args[0] =~ /^-/
-    hostname = args.shift()
-    if !hostname.nil?()
-      discoveryrc = File.expand_path("~/.discoveryrc")
-      aliasmap = {}
-      if File.readable?(discoveryrc)
-        File.readlines(discoveryrc).each {|line| line.scan(/(\w+)\s*=\s*(.*)/) {|k,v| aliasmap[k]=v}}
-      end
-      @hosts = (aliasmap[hostname] || hostname).split(',').map() {|host| host.strip()};
-    else
-      @hosts = nil
+
+    discoveryrc = File.expand_path("~/.discoveryrc")
+    aliasmap = {}
+    if File.readable?(discoveryrc)
+      File.readlines(discoveryrc).each {|line| line.scan(/(\w+)\s*=\s*(.*)/) {|k,v| aliasmap[k]=v}}
     end
+
+    if args.size == 0 || args[0] =~ /^-/
+      @hosts = aliasmap["localhost"].nil? ? ["http://localhost:8080"] : aliasmap["localhost"]
+    else
+      hostname = args.shift()
+      @hosts = (aliasmap[hostname] || hostname).split(',').map() {|host| host.strip()};
+    end
+    
     return @hosts
   end
 
