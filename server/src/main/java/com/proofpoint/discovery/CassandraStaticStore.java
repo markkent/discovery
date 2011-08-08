@@ -1,28 +1,11 @@
 package com.proofpoint.discovery;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.proofpoint.json.JsonCodec;
-import com.proofpoint.log.Logger;
-import me.prettyprint.cassandra.model.QuorumAllConsistencyLevelPolicy;
-import me.prettyprint.cassandra.serializers.StringSerializer;
-import me.prettyprint.cassandra.service.ThriftCfDef;
-import me.prettyprint.cassandra.service.ThriftKsDef;
-import me.prettyprint.hector.api.Cluster;
-import me.prettyprint.hector.api.Keyspace;
-import me.prettyprint.hector.api.beans.HColumn;
-import me.prettyprint.hector.api.beans.OrderedRows;
-import me.prettyprint.hector.api.beans.Row;
-import me.prettyprint.hector.api.ddl.ColumnFamilyDefinition;
-import me.prettyprint.hector.api.ddl.KeyspaceDefinition;
-import me.prettyprint.hector.api.factory.HFactory;
-import me.prettyprint.hector.api.mutation.Mutator;
-import org.joda.time.DateTime;
+import static com.google.common.base.Predicates.and;
+import static com.google.common.collect.Iterables.filter;
+import static com.proofpoint.discovery.CassandraPaginator.paginate;
+import static com.proofpoint.discovery.Service.matchesPool;
+import static com.proofpoint.discovery.Service.matchesType;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
@@ -31,20 +14,32 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.google.common.base.Predicates.and;
-import static com.google.common.collect.Iterables.filter;
-import static com.google.common.collect.Iterables.find;
-import static com.proofpoint.discovery.CassandraPaginator.paginate;
-import static com.proofpoint.discovery.ColumnFamilies.named;
-import static com.proofpoint.discovery.Service.matchesPool;
-import static com.proofpoint.discovery.Service.matchesType;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.inject.Inject;
+import javax.inject.Provider;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.proofpoint.json.JsonCodec;
+import com.proofpoint.log.Logger;
+
+import me.prettyprint.cassandra.model.QuorumAllConsistencyLevelPolicy;
+import me.prettyprint.cassandra.serializers.StringSerializer;
+import me.prettyprint.hector.api.Cluster;
+import me.prettyprint.hector.api.Keyspace;
+import me.prettyprint.hector.api.beans.HColumn;
+import me.prettyprint.hector.api.beans.Row;
+import me.prettyprint.hector.api.factory.HFactory;
+import me.prettyprint.hector.api.mutation.Mutator;
+
+import org.joda.time.DateTime;
 
 public class CassandraStaticStore
         implements StaticStore
 {
     private final static Logger log = Logger.get(CassandraDynamicStore.class);
-
-    private final static String COLUMN_FAMILY = "static_announcements";
+    final static String COLUMN_FAMILY = "static_announcements";
     private static final String COLUMN_NAME = "static";
     private static final int PAGE_SIZE = 1000;
 
@@ -52,6 +47,8 @@ public class CassandraStaticStore
 
     private final Keyspace keyspace;
     private final Provider<DateTime> currentTime;
+    private final Cluster cluster;
+    private final CassandraStoreConfig config;
 
     private final AtomicReference<Set<Service>> services = new AtomicReference<Set<Service>>(ImmutableSet.<Service>of());
     private final ScheduledExecutorService loader = new ScheduledThreadPoolExecutor(1);
@@ -61,19 +58,10 @@ public class CassandraStaticStore
     public CassandraStaticStore(CassandraStoreConfig config, Cluster cluster, Provider<DateTime> currentTime)
     {
         this.currentTime = currentTime;
-
-        String keyspaceName = config.getKeyspace();
-        KeyspaceDefinition definition = cluster.describeKeyspace(keyspaceName);
-        if (definition == null) {
-            cluster.addKeyspace(new ThriftKsDef(keyspaceName));
-        }
-
-        ColumnFamilyDefinition existing = find(cluster.describeKeyspace(keyspaceName).getCfDefs(), named(COLUMN_FAMILY), null);
-        if (existing == null) {
-            cluster.addColumnFamily(new ThriftCfDef(keyspaceName, COLUMN_FAMILY));
-        }
-
-        keyspace = HFactory.createKeyspace(keyspaceName, cluster);
+        this.cluster = cluster;
+        this.config = config;
+        
+        keyspace = HFactory.createKeyspace(config.getKeyspace(), cluster);
         keyspace.setConsistencyLevelPolicy(new QuorumAllConsistencyLevelPolicy());
     }
 

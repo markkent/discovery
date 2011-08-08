@@ -2,10 +2,11 @@ package com.proofpoint.discovery;
 
 import com.proofpoint.bootstrap.Bootstrap;
 import com.proofpoint.cassandra.CassandraModule;
-import com.proofpoint.json.JsonModule;
+import com.proofpoint.event.client.HttpEventModule;
 import com.proofpoint.http.server.HttpServerModule;
 import com.proofpoint.jaxrs.JaxrsModule;
 import com.proofpoint.jmx.JmxModule;
+import com.proofpoint.json.JsonModule;
 import com.proofpoint.log.Logger;
 import com.proofpoint.node.NodeModule;
 
@@ -14,16 +15,16 @@ public class Main
     private final static Logger log = Logger.get(Main.class);
 
     public static void main(String[] args)
-            throws Exception
     {
         try {
-            Bootstrap app = new Bootstrap(new NodeModule(),
+            Bootstrap app = new Bootstrap(new CassandraModule(),
+                                          new NodeModule(),
                                           new HttpServerModule(),
                                           new JaxrsModule(),
                                           new JsonModule(),
                                           new JmxModule(),
                                           new DiscoveryModule(),
-                                          new CassandraModule());
+                                          new HttpEventModule()).strictConfig();
             app.initialize();
         }
         catch (Exception e) {
@@ -32,4 +33,6 @@ public class Main
             System.exit(1);
         }
     }
+    
+
 }

@@ -2,6 +2,8 @@ package com.proofpoint.discovery;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.proofpoint.discovery.event.DiscoveryEvents;
+import com.proofpoint.event.client.InMemoryEventClient;
 import com.proofpoint.jaxrs.testing.MockUriInfo;
 import com.proofpoint.node.NodeInfo;
 import org.testng.annotations.BeforeMethod;
@@ -24,7 +26,7 @@ public class TestStaticAnnouncementResource
     public void setup()
     {
         store = new InMemoryStaticStore();
-        resource = new StaticAnnouncementResource(store, new NodeInfo("testing"));
+        resource = new StaticAnnouncementResource(store, new NodeInfo("testing"), new DiscoveryEvents (new InMemoryEventClient()));
     }
 
     @Test
@@ -32,7 +34,7 @@ public class TestStaticAnnouncementResource
     {
         StaticAnnouncement announcement = new StaticAnnouncement("testing", "storage", "alpha", "/a/b", ImmutableMap.of("http", "http://localhost:1111"));
 
-        Response response = resource.post(announcement, new MockUriInfo(URI.create("http://localhost:8080/v1/announcement/static")));
+        Response response = resource.post(announcement, new MockUriInfo(URI.create("http://localhost:8080/v1/announcement/static")), null);
 
         assertNotNull(response);
         assertEquals(response.getStatus(), Response.Status.CREATED.getStatusCode());
@@ -53,7 +55,7 @@ public class TestStaticAnnouncementResource
     {
         StaticAnnouncement announcement = new StaticAnnouncement("production", "storage", "alpha", "/a/b/c", ImmutableMap.of("http", "http://localhost:1111"));
 
-        Response response = resource.post(announcement, new MockUriInfo(URI.create("http://localhost:8080/v1/announcement/static")));
+        Response response = resource.post(announcement, new MockUriInfo(URI.create("http://localhost:8080/v1/announcement/static")), null);
 
         assertNotNull(response);
         assertEquals(response.getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
@@ -70,7 +72,7 @@ public class TestStaticAnnouncementResource
         store.put(red);
         store.put(blue);
 
-        resource.delete(blue.getId());
+        resource.delete(blue.getId(), null);
         assertEquals(store.getAll(), ImmutableSet.of(red));
     }
 
@@ -79,7 +81,7 @@ public class TestStaticAnnouncementResource
     {
         StaticAnnouncement announcement = new StaticAnnouncement("testing", "storage", "alpha", null, ImmutableMap.of("http", "http://localhost:1111"));
 
-        Response response = resource.post(announcement, new MockUriInfo(URI.create("http://localhost:8080/v1/announcement/")));
+        Response response = resource.post(announcement, new MockUriInfo(URI.create("http://localhost:8080/v1/announcement/")), null);
 
         assertNotNull(response);
         assertEquals(response.getStatus(), Response.Status.CREATED.getStatusCode());
