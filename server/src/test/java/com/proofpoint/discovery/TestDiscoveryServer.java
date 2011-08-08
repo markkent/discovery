@@ -26,6 +26,7 @@ import com.proofpoint.node.NodeInfo;
 import com.proofpoint.node.NodeModule;
 import org.apache.cassandra.config.ConfigurationException;
 import org.apache.thrift.transport.TTransportException;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeMethod;
@@ -82,6 +83,8 @@ public class TestDiscoveryServer
                 new HttpEventModule(),
                 new ConfigurationModule(new ConfigurationFactory(serverProperties)));
 
+        Assert.assertTrue(serverInjector.getInstance(CassandraSchemaInitialization.class).waitForInit());
+        
         // TODO: wrap this in a testing bootstrap that handles PostConstruct & PreDestroy
         dynamicStore = serverInjector.getInstance(CassandraDynamicStore.class);
         dynamicStore.initialize();

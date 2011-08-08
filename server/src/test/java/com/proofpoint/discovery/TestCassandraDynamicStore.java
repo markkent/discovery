@@ -6,6 +6,7 @@ import me.prettyprint.hector.api.Cluster;
 import org.apache.cassandra.config.ConfigurationException;
 import org.apache.thrift.transport.TTransportException;
 import org.joda.time.DateTime;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeSuite;
@@ -30,8 +31,9 @@ public class TestCassandraDynamicStore
 
         Cluster cluster = new DiscoveryModule().getCluster(CassandraServerSetup.getServerInfo(), new NodeInfo("testing"));
         cassandraStore = new CassandraDynamicStore(storeConfig, config, timeProvider, cluster);
+        Assert.assertTrue(new CassandraSchemaInitialization(cluster, storeConfig).waitForInit());
         cassandraStore.initialize();
-
+        
         return new DynamicStore()
         {
             @Override
