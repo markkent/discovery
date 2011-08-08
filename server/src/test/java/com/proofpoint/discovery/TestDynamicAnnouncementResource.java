@@ -2,6 +2,8 @@ package com.proofpoint.discovery;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.proofpoint.discovery.event.DiscoveryEvents;
+import com.proofpoint.event.client.InMemoryEventClient;
 import com.proofpoint.jaxrs.testing.MockUriInfo;
 import com.proofpoint.node.NodeInfo;
 import org.testng.annotations.BeforeMethod;
@@ -26,7 +28,7 @@ public class TestDynamicAnnouncementResource
     public void setup()
     {
         store = new InMemoryDynamicStore(new DiscoveryConfig(), new RealTimeProvider());
-        resource = new DynamicAnnouncementResource(store, new NodeInfo("testing"));
+        resource = new DynamicAnnouncementResource(store, new NodeInfo("testing"), new DiscoveryEvents(new InMemoryEventClient()));
     }
 
     @Test
@@ -37,7 +39,7 @@ public class TestDynamicAnnouncementResource
         );
 
         Id<Node> nodeId = Id.random();
-        Response response = resource.put(nodeId, new MockUriInfo(URI.create("http://localhost:8080/v1/announcement/" + nodeId.toString())), announcement);
+        Response response = resource.put(nodeId, new MockUriInfo(URI.create("http://localhost:8080/v1/announcement/" + nodeId.toString())), announcement, null);
 
         assertNotNull(response);
         assertEquals(response.getStatus(), Response.Status.ACCEPTED.getStatusCode());
@@ -59,7 +61,7 @@ public class TestDynamicAnnouncementResource
                 new DynamicServiceAnnouncement(Id.<Service>random(), "storage", ImmutableMap.of("key", "new")))
         );
 
-        Response response = resource.put(nodeId, new MockUriInfo(URI.create("http://localhost:8080/v1/announcement/" + nodeId.toString())), announcement);
+        Response response = resource.put(nodeId, new MockUriInfo(URI.create("http://localhost:8080/v1/announcement/" + nodeId.toString())), announcement, null);
 
         assertNotNull(response);
         assertEquals(response.getStatus(), Response.Status.ACCEPTED.getStatusCode());
@@ -75,7 +77,7 @@ public class TestDynamicAnnouncementResource
         );
 
         Id<Node> nodeId = Id.random();
-        Response response = resource.put(nodeId, new MockUriInfo(URI.create("http://localhost:8080/v1/announcement/" + nodeId.toString())), announcement);
+        Response response = resource.put(nodeId, new MockUriInfo(URI.create("http://localhost:8080/v1/announcement/" + nodeId.toString())), announcement, null);
 
         assertNotNull(response);
         assertEquals(response.getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
@@ -99,7 +101,7 @@ public class TestDynamicAnnouncementResource
         store.put(redNodeId, red);
         store.put(blueNodeId, blue);
 
-        Response response = resource.delete(blueNodeId);
+        Response response = resource.delete(blueNodeId, null);
 
         assertNotNull(response);
         assertEquals(response.getStatus(), Response.Status.NO_CONTENT.getStatusCode());
@@ -110,7 +112,7 @@ public class TestDynamicAnnouncementResource
     @Test
     public void testDeleteMissing()
     {
-        Response response = resource.delete(Id.<Node>random());
+        Response response = resource.delete(Id.<Node>random(), null);
 
         assertNotNull(response);
         assertEquals(response.getStatus(), Response.Status.NOT_FOUND.getStatusCode());
@@ -126,7 +128,7 @@ public class TestDynamicAnnouncementResource
         );
 
         Id<Node> nodeId = Id.random();
-        Response response = resource.put(nodeId, new MockUriInfo(URI.create("http://localhost:8080/v1/announcement/" + nodeId.toString())), announcement);
+        Response response = resource.put(nodeId, new MockUriInfo(URI.create("http://localhost:8080/v1/announcement/" + nodeId.toString())), announcement, null);
 
         assertNotNull(response);
         assertEquals(response.getStatus(), Response.Status.ACCEPTED.getStatusCode());

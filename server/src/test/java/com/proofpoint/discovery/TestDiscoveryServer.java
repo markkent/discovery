@@ -16,6 +16,7 @@ import com.proofpoint.discovery.client.ServiceDescriptor;
 import com.proofpoint.discovery.client.ServiceSelector;
 import com.proofpoint.discovery.client.ServiceSelectorConfig;
 import com.proofpoint.discovery.client.testing.SimpleServiceSelector;
+import com.proofpoint.event.client.HttpEventModule;
 import com.proofpoint.json.JsonCodec;
 import com.proofpoint.json.JsonModule;
 import com.proofpoint.http.server.testing.TestingHttpServer;
@@ -78,6 +79,7 @@ public class TestDiscoveryServer
                 new JaxrsModule(),
                 new DiscoveryModule(),
                 new TestingCassandraModule(),
+                new HttpEventModule(),
                 new ConfigurationModule(new ConfigurationFactory(serverProperties)));
 
         // TODO: wrap this in a testing bootstrap that handles PostConstruct & PreDestroy

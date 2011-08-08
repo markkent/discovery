@@ -2,6 +2,8 @@ package com.proofpoint.discovery;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.proofpoint.discovery.event.DiscoveryEvents;
+import com.proofpoint.event.client.InMemoryEventClient;
 import com.proofpoint.node.NodeInfo;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -23,7 +25,7 @@ public class TestServiceResource
     {
         dynamicStore = new InMemoryDynamicStore(new DiscoveryConfig(), new TestingTimeProvider());
         staticStore = new InMemoryStaticStore();
-        resource = new ServiceResource(dynamicStore, staticStore, new NodeInfo("testing"));
+        resource = new ServiceResource(dynamicStore, staticStore, new NodeInfo("testing"), new DiscoveryEvents (new InMemoryEventClient()));
     }
 
     @Test

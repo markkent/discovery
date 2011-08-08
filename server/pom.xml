@@ -11,7 +11,7 @@
     <parent>
         <groupId>com.proofpoint.platform</groupId>
         <artifactId>rest-server-base</artifactId>
-        <version>0.43</version>
+        <version>0.44-SNAPSHOT</version>
     </parent>
     <properties>
         <main-class>com.proofpoint.discovery.Main</main-class>
@@ -23,13 +23,18 @@
         <dependency>
             <groupId>com.proofpoint.platform</groupId>
             <artifactId>experimental</artifactId>
-            <version>0.43</version>
+            <version>0.44-SNAPSHOT</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.proofpoint.platform</groupId>
+            <artifactId>event-experimental</artifactId>
         </dependency>
 
         <dependency>
             <groupId>com.proofpoint.platform</groupId>
             <artifactId>cassandra-experimental</artifactId>
-            <version>0.43</version>
+            <version>0.44-SNAPSHOT</version>
         </dependency>
 
         <dependency>
@@ -76,12 +81,6 @@
         <dependency>
             <groupId>com.proofpoint.platform</groupId>
             <artifactId>jmx</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>me.prettyprint</groupId>
-            <artifactId>hector-core</artifactId>
-            <version>0.7.0-28</version>
         </dependency>
 
         <!-- for packaging -->
