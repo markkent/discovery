@@ -5,7 +5,6 @@ import javax.annotation.PostConstruct;
 import com.google.inject.Inject;
 import com.proofpoint.log.Logger;
 
-import me.prettyprint.cassandra.model.AllOneConsistencyLevelPolicy;
 import me.prettyprint.cassandra.service.ThriftCfDef;
 import me.prettyprint.cassandra.service.ThriftKsDef;
 import me.prettyprint.hector.api.Cluster;
