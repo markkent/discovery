@@ -52,8 +52,10 @@ public class CassandraDynamicStore
     private final JsonCodec<List<Service>> codec = JsonCodec.listJsonCodec(Service.class);
     private final ScheduledExecutorService loader = new ScheduledThreadPoolExecutor(1);
 
-    private final Keyspace keyspace;
+    private Keyspace keyspace;
     private final Duration maxAge;
+    private final CassandraStoreConfig config;
+    private final Cluster cluster;
 
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     private final Provider<DateTime> currentTime;
@@ -68,10 +70,9 @@ public class CassandraDynamicStore
             Cluster cluster)
     {
         this.currentTime = currentTime;
+        this.config = config;
+        this.cluster = cluster;
         maxAge = discoveryConfig.getMaxAge();
-
-        keyspace = HFactory.createKeyspace(config.getKeyspace(), cluster);
-        keyspace.setConsistencyLevelPolicy(new AllOneConsistencyLevelPolicy());
     }
 
     @PostConstruct
@@ -81,6 +82,9 @@ public class CassandraDynamicStore
             throw new IllegalStateException("Already initialized");
         }
 
+        keyspace = HFactory.createKeyspace(config.getKeyspace(), cluster);
+        keyspace.setConsistencyLevelPolicy(new AllOneConsistencyLevelPolicy());
+        
         loader.scheduleWithFixedDelay(new Runnable()
                                       {
                                           @Override

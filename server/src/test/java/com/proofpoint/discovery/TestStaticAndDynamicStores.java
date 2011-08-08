@@ -28,6 +28,7 @@ public class TestStaticAndDynamicStores
 
         CassandraStaticStore staticStore = new CassandraStaticStore(storeConfig, cluster, new TestingTimeProvider());
         CassandraDynamicStore dynamicStore = new CassandraDynamicStore(storeConfig, new DiscoveryConfig(), new TestingTimeProvider(), cluster);
+        new CassandraSchemaInitialization(cluster, storeConfig).waitForInit();
         dynamicStore.initialize();
 
         assertTrue(staticStore.getAll().isEmpty());

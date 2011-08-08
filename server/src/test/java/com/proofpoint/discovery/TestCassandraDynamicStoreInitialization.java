@@ -1,7 +1,5 @@
 package com.proofpoint.discovery;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.proofpoint.cassandra.testing.CassandraServerSetup;
 import com.proofpoint.node.NodeInfo;
 import com.proofpoint.units.Duration;
@@ -11,6 +9,7 @@ import me.prettyprint.hector.api.Cluster;
 import me.prettyprint.hector.api.ddl.ColumnFamilyDefinition;
 import org.apache.cassandra.config.ConfigurationException;
 import org.apache.thrift.transport.TTransportException;
+import org.testng.Assert;
 import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
@@ -52,12 +51,13 @@ public class TestCassandraDynamicStoreInitialization
         ThriftCfDef columnFamily = new ThriftCfDef(keyspace, CassandraDynamicStore.COLUMN_FAMILY);
         columnFamily.setGcGraceSeconds(100);
         cluster.addColumnFamily(columnFamily);
-
-        CassandraDynamicStore store = new CassandraDynamicStore(new CassandraStoreConfig().setKeyspace(keyspace),
+        CassandraStoreConfig storeConfig = new CassandraStoreConfig().setKeyspace(keyspace);
+        CassandraDynamicStore store = new CassandraDynamicStore(storeConfig,
                                                                 new DiscoveryConfig().setMaxAge(new Duration(1, TimeUnit.MINUTES)),
                                                                 new TestingTimeProvider(),
                                                                 cluster);
         store.initialize();
+        Assert.assertTrue(new CassandraSchemaInitialization(cluster, storeConfig).waitForInit());
         store.shutdown();
 
         ColumnFamilyDefinition columnFamilyDefinition = find(cluster.describeKeyspace(keyspace).getCfDefs(), named(CassandraDynamicStore.COLUMN_FAMILY));
