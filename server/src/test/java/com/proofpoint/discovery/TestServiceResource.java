@@ -19,13 +19,15 @@ public class TestServiceResource
     private InMemoryDynamicStore dynamicStore;
     private InMemoryStaticStore staticStore;
     private ServiceResource resource;
+    private DiscoveryConfig discoveryConfig;
 
     @BeforeMethod
     protected void setUp()
     {
         dynamicStore = new InMemoryDynamicStore(new DiscoveryConfig(), new TestingTimeProvider());
         staticStore = new InMemoryStaticStore();
-        resource = new ServiceResource(dynamicStore, staticStore, new NodeInfo("testing"), new DiscoveryEvents (new InMemoryEventClient()));
+        discoveryConfig = new DiscoveryConfig();
+        resource = new ServiceResource(dynamicStore, staticStore, new NodeInfo("testing"), new DiscoveryEvents (new InMemoryEventClient()), discoveryConfig);
     }
 
     @Test
@@ -57,6 +59,9 @@ public class TestServiceResource
                 toServiceWith(redNodeId, red.getLocation(), red.getPool()).apply(redWeb))));
 
         assertEquals(resource.getServices("unknown"), new Services("testing", Collections.<Service>emptySet()));
+        assertEquals(resource.getByTypeStats().getCount(),3);
+        assertEquals(resource.getAllServicesStats().getCount(),0);
+        assertEquals(resource.getByTypeAndPoolStats().getCount(),0);
     }
 
     @Test
@@ -86,6 +91,9 @@ public class TestServiceResource
         assertEquals(resource.getServices("storage", "beta"), new Services("testing", ImmutableSet.of(toServiceWith(blueNodeId, blue.getLocation(), blue.getPool()).apply(blueStorage))));
 
         assertEquals(resource.getServices("storage", "unknown"), new Services("testing", Collections.<Service>emptySet()));
+        assertEquals(resource.getByTypeStats().getCount(),0);
+        assertEquals(resource.getAllServicesStats().getCount(),0);
+        assertEquals(resource.getByTypeAndPoolStats().getCount(),3);
     }
 
     @Test
@@ -113,5 +121,9 @@ public class TestServiceResource
                 toServiceWith(redNodeId, red.getLocation(), red.getPool()).apply(redWeb),
                 toServiceWith(greenNodeId, green.getLocation(), green.getPool()).apply(greenStorage),
                 toServiceWith(blueNodeId, blue.getLocation(), blue.getPool()).apply(blueStorage))));
+
+        assertEquals(resource.getByTypeStats().getCount(),0);
+        assertEquals(resource.getAllServicesStats().getCount(),1);
+        assertEquals(resource.getByTypeAndPoolStats().getCount(),0);
     }
 }

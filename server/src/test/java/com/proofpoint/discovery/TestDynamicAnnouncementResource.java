@@ -23,12 +23,14 @@ public class TestDynamicAnnouncementResource
 {
     private InMemoryDynamicStore store;
     private DynamicAnnouncementResource resource;
+    private DiscoveryConfig discoveryConfig;
 
     @BeforeMethod
     public void setup()
     {
         store = new InMemoryDynamicStore(new DiscoveryConfig(), new RealTimeProvider());
-        resource = new DynamicAnnouncementResource(store, new NodeInfo("testing"), new DiscoveryEvents(new InMemoryEventClient()));
+        discoveryConfig = new DiscoveryConfig();
+        resource = new DynamicAnnouncementResource(store, new NodeInfo("testing"), new DiscoveryEvents(new InMemoryEventClient()), discoveryConfig);
     }
 
     @Test
@@ -45,6 +47,10 @@ public class TestDynamicAnnouncementResource
         assertEquals(response.getStatus(), Response.Status.ACCEPTED.getStatusCode());
 
         assertEqualsIgnoreOrder(store.getAll(), transform(announcement.getServiceAnnouncements(), toServiceWith(nodeId, announcement.getLocation(), announcement.getPool())));
+        assertEquals(resource.getDynamicDeleteStats().getCount(), 0);
+        assertEquals(resource.getDynamicPutStats().getCount(), 1);
+        assertEquals(resource.getEnvironmentMismatchCount(),0);
+        assertEquals(resource.getNotFoundCount(),0);
     }
 
     @Test
@@ -67,6 +73,10 @@ public class TestDynamicAnnouncementResource
         assertEquals(response.getStatus(), Response.Status.ACCEPTED.getStatusCode());
 
         assertEqualsIgnoreOrder(store.getAll(), transform(announcement.getServiceAnnouncements(), toServiceWith(nodeId, announcement.getLocation(), announcement.getPool())));
+        assertEquals(resource.getDynamicDeleteStats().getCount(), 0);
+        assertEquals(resource.getDynamicPutStats().getCount(), 1);
+        assertEquals(resource.getEnvironmentMismatchCount(),0);
+        assertEquals(resource.getNotFoundCount(),0);
     }
 
     @Test
@@ -83,6 +93,10 @@ public class TestDynamicAnnouncementResource
         assertEquals(response.getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
 
         assertTrue(store.getAll().isEmpty());
+        assertEquals(resource.getDynamicDeleteStats().getCount(), 0);
+        assertEquals(resource.getDynamicPutStats().getCount(), 0);
+        assertEquals(resource.getEnvironmentMismatchCount(),1);
+        assertEquals(resource.getNotFoundCount(),0);
     }
 
     @Test
@@ -107,6 +121,10 @@ public class TestDynamicAnnouncementResource
         assertEquals(response.getStatus(), Response.Status.NO_CONTENT.getStatusCode());
 
         assertEqualsIgnoreOrder(store.getAll(), transform(red.getServiceAnnouncements(), toServiceWith(redNodeId, red.getLocation(), red.getPool())));
+        assertEquals(resource.getDynamicDeleteStats().getCount(), 1);
+        assertEquals(resource.getDynamicPutStats().getCount(), 0);
+        assertEquals(resource.getEnvironmentMismatchCount(),0);
+        assertEquals(resource.getNotFoundCount(),0);
     }
 
     @Test
@@ -118,6 +136,10 @@ public class TestDynamicAnnouncementResource
         assertEquals(response.getStatus(), Response.Status.NOT_FOUND.getStatusCode());
 
         assertTrue(store.getAll().isEmpty());
+        assertEquals(resource.getDynamicDeleteStats().getCount(), 0);
+        assertEquals(resource.getDynamicPutStats().getCount(), 0);
+        assertEquals(resource.getEnvironmentMismatchCount(),0);
+        assertEquals(resource.getNotFoundCount(),1);
     }
 
     @Test

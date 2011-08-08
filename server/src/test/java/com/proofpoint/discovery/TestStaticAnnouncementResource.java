@@ -21,12 +21,14 @@ public class TestStaticAnnouncementResource
 {
     private InMemoryStaticStore store;
     private StaticAnnouncementResource resource;
+    private DiscoveryConfig discoveryConfig;
 
     @BeforeMethod
     public void setup()
     {
         store = new InMemoryStaticStore();
-        resource = new StaticAnnouncementResource(store, new NodeInfo("testing"), new DiscoveryEvents (new InMemoryEventClient()));
+        discoveryConfig = new DiscoveryConfig();
+        resource = new StaticAnnouncementResource(store, new NodeInfo("testing"), new DiscoveryEvents (new InMemoryEventClient()), discoveryConfig);
     }
 
     @Test
@@ -48,6 +50,9 @@ public class TestStaticAnnouncementResource
         assertEquals(service.getType(), announcement.getType());
         assertEquals(service.getPool(), announcement.getPool());
         assertEquals(service.getProperties(), announcement.getProperties());
+        assertEquals(resource.getStaticGetStats().getCount(),0);
+        assertEquals(resource.getStaticDeleteStats().getCount(),0);
+        assertEquals(resource.getStaticPostStats().getCount(),1);
     }
 
     @Test
@@ -59,6 +64,9 @@ public class TestStaticAnnouncementResource
 
         assertNotNull(response);
         assertEquals(response.getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
+        assertEquals(resource.getStaticGetStats().getCount(),0);
+        assertEquals(resource.getStaticDeleteStats().getCount(),0);
+        assertEquals(resource.getStaticPostStats().getCount(),0);
 
         assertTrue(store.getAll().isEmpty());
     }
@@ -74,6 +82,9 @@ public class TestStaticAnnouncementResource
 
         resource.delete(blue.getId(), null);
         assertEquals(store.getAll(), ImmutableSet.of(red));
+        assertEquals(resource.getStaticGetStats().getCount(),0);
+        assertEquals(resource.getStaticDeleteStats().getCount(),1);
+        assertEquals(resource.getStaticPostStats().getCount(),0);
     }
 
     @Test
@@ -105,5 +116,8 @@ public class TestStaticAnnouncementResource
         Services expected = new Services("testing", ImmutableSet.of(red, blue));
 
         assertEquals(actual, expected);
+        assertEquals(resource.getStaticGetStats().getCount(),1);
+        assertEquals(resource.getStaticDeleteStats().getCount(),0);
+        assertEquals(resource.getStaticPostStats().getCount(),0);
     }
 }
