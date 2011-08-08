@@ -5,6 +5,7 @@ import com.proofpoint.configuration.testing.ConfigAssertions;
 import com.proofpoint.units.Duration;
 import org.testng.annotations.Test;
 
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -17,7 +18,8 @@ public class TestDiscoveryConfig
     public void testDefaults()
     {
         ConfigAssertions.assertRecordedDefaults(ConfigAssertions.recordDefaults(DiscoveryConfig.class)
-                                                        .setMaxAge(new Duration(30, TimeUnit.SECONDS)));
+                .setMaxAge(new Duration(30, TimeUnit.SECONDS))
+                .setStatsWindowSize(5000));
     }
 
     @Test
@@ -25,10 +27,12 @@ public class TestDiscoveryConfig
     {
         Map<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("discovery.max-age", "1m")
+                .put("discovery.timed-statistics-window-size", "1000")
                 .build();
 
         DiscoveryConfig expected = new DiscoveryConfig()
-                .setMaxAge(new Duration(1, TimeUnit.MINUTES));
+                .setMaxAge(new Duration(1, TimeUnit.MINUTES))
+                .setStatsWindowSize(1000);
 
         ConfigAssertions.assertFullMapping(properties, expected);
     }
@@ -40,5 +44,12 @@ public class TestDiscoveryConfig
         DiscoveryConfig config = new DiscoveryConfig().setMaxAge(null);
 
         assertFailsValidation(config, "maxAge", "may not be null", NotNull.class);
+    }
+
+    @Test
+    public void testValidatesMinimumStatsWindow()
+    {
+        DiscoveryConfig config = new DiscoveryConfig().setStatsWindowSize(50);
+        assertFailsValidation(config, "statsWindowSize", "must be greater than or equal to 100", Min.class);
     }
 }
