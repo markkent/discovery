@@ -52,7 +52,7 @@ public class LocalServiceSelectorFactory implements ServiceSelectorFactory
         private final long refreshIntervalMillis = 5000L;  //One thread will try a cache refresh while others may get older data
         private final long tooOldMillis = 30000L;          //Must refresh cache at this age
         private final AtomicLong lastUpdate = new AtomicLong(0);
-        private volatile List<ServiceDescriptor> serviceDescriptorCache = null;  //Pointer swap of immutable data.
+        private List<ServiceDescriptor> serviceDescriptorCache = null;  //Pointer swap of immutable data.
         
         LocalServiceSelector (String type, String pool)
         {
@@ -72,6 +72,10 @@ public class LocalServiceSelectorFactory implements ServiceSelectorFactory
             return pool;
         }
 
+        /**
+         * Debugging finds that this method is called at extremely high rates.  It must be very fast.
+         * @see com.proofpoint.discovery.client.ServiceSelector#selectAllServices()
+         */
         @Override
         public List<ServiceDescriptor> selectAllServices()
         {
