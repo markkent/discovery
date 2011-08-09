@@ -22,15 +22,17 @@ public class DynamicAnnouncementEvent
     public static class Builder
     {
         private final EventClient eventClient;
+        private final DiscoveryEventConfig config;
         private final long startTime = System.nanoTime();
         private DynamicAnnouncement announcement;
         private boolean success = false;
         private String remoteAddress;
 
-        Builder(EventClient eventClient)
+        Builder(EventClient eventClient, DiscoveryEventConfig config)
         {
             Preconditions.checkNotNull(eventClient, "eventClient is null");
             this.eventClient = eventClient;
+            this.config = config;
         }
 
         public Builder setAnnouncement(DynamicAnnouncement announcement)
@@ -70,7 +72,7 @@ public class DynamicAnnouncementEvent
         public DynamicAnnouncementEvent[] post()
         {
             DynamicAnnouncementEvent events[] = build();
-            if (events != null) {
+            if ((events != null) && (config.isEventEnabled(DiscoveryEventType.DYNAMICANNOUNCE))) {
                 eventClient.<DynamicAnnouncementEvent>post(events); // Generics to keep this from being ambiguous
             }
             return events;

@@ -17,13 +17,15 @@ public class DynamicDeleteEvent
         private final long startTime = System.nanoTime();
         private final Id<Node> id;
         private final EventClient eventClient;
+        private final DiscoveryEventConfig config;
         private boolean success = false;
         private String remoteAddress;
 
-        Builder(Id<Node> id, EventClient eventClient)
+        Builder(Id<Node> id, EventClient eventClient, DiscoveryEventConfig config)
         {
             this.id = id;
             this.eventClient = eventClient;
+            this.config = config;
         }
 
         public Builder setSuccess()
@@ -35,13 +37,15 @@ public class DynamicDeleteEvent
         public DynamicDeleteEvent post()
         {
             DynamicDeleteEvent event = build();
-            eventClient.post(event);
+            if (config.isEventEnabled(DiscoveryEventType.DYNAMICDELETE)) {
+                eventClient.post(event);
+            }
             return event;
         }
 
         public DynamicDeleteEvent build()
         {
-            return new DynamicDeleteEvent(new Duration (System.nanoTime() - startTime, TimeUnit.NANOSECONDS), id, success, remoteAddress);
+            return new DynamicDeleteEvent(new Duration(System.nanoTime() - startTime, TimeUnit.NANOSECONDS), id, success, remoteAddress);
         }
 
         public Builder setRemoteAddress(String address)
@@ -50,12 +54,12 @@ public class DynamicDeleteEvent
             return this;
         }
     }
-    
+
     private final Duration duration;
     private final Id<Node> id;
     private final boolean success;
     private final String remoteAddress;
-    
+
     DynamicDeleteEvent(Duration duration, Id<Node> id, boolean success, String remoteAddress)
     {
         this.duration = duration;
@@ -63,7 +67,7 @@ public class DynamicDeleteEvent
         this.success = success;
         this.remoteAddress = remoteAddress;
     }
-    
+
     @EventField
     public double getDuration()
     {

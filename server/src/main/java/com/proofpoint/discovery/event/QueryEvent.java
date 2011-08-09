@@ -16,15 +16,17 @@ public class QueryEvent
     {
         private final long startTime = System.nanoTime();
         private final EventClient eventClient;
+        private final DiscoveryEventConfig config;
         private final String type, pool;
         private boolean success;
         private int serviceCount;
-        
-        Builder (EventClient eventClient, String type, String pool)
+
+        Builder(EventClient eventClient, String type, String pool, DiscoveryEventConfig config)
         {
             this.eventClient = eventClient;
             this.type = type;
             this.pool = pool;
+            this.config = config;
         }
 
         public Builder setSuccess()
@@ -36,7 +38,9 @@ public class QueryEvent
         public QueryEvent post()
         {
             QueryEvent event = build();
-            eventClient.post(event);
+            if (config.isEventEnabled(DiscoveryEventType.SERVICEQUERY)) {
+                eventClient.post(event);
+            }
             return event;
         }
 
@@ -51,12 +55,12 @@ public class QueryEvent
             return this;
         }
     }
-    
+
     private final Duration duration;
     private final String type, pool;
     private final int resultCount;
     private final boolean success;
-    
+
     QueryEvent(Duration duration, int resultCount, String type, String pool, boolean success)
     {
         this.duration = duration;
@@ -65,27 +69,27 @@ public class QueryEvent
         this.pool = pool;
         this.success = success;
     }
-    
+
     @EventField
     public double getDuration()
     {
         return duration.toMillis();
     }
-    
+
     @EventField
-    public int getResultCount ()
+    public int getResultCount()
     {
         return resultCount;
     }
-    
+
     @EventField
-    public String getType ()
+    public String getType()
     {
         return type;
     }
-    
+
     @EventField
-    public String getPool ()
+    public String getPool()
     {
         return pool;
     }

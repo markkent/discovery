@@ -21,30 +21,32 @@ public class StaticAnnouncementEvent
     public static class Builder
     {
         private final EventClient eventClient;
+        private final DiscoveryEventConfig config;
         private final long startTime = System.nanoTime();
         private StaticAnnouncement announcement;
-        private boolean success= false;
+        private boolean success = false;
         private Id<Service> serviceId;
         private String remoteAddress;
-        
-        Builder (EventClient eventClient)
+
+        Builder(EventClient eventClient, DiscoveryEventConfig config)
         {
             Preconditions.checkNotNull(eventClient, "eventClient is null");
             this.eventClient = eventClient;
+            this.config = config;
         }
-        
+
         public Builder setAnnouncement(StaticAnnouncement announcement)
         {
             this.announcement = announcement;
             return this;
         }
-        
-        public Builder setRemoteAddress (String address)
+
+        public Builder setRemoteAddress(String address)
         {
             remoteAddress = address;
             return this;
         }
-        
+
         public Builder setSuccess()
         {
             success = true;
@@ -56,16 +58,18 @@ public class StaticAnnouncementEvent
             serviceId = id;
             return this;
         }
-        
-        public StaticAnnouncementEvent build ()
+
+        public StaticAnnouncementEvent build()
         {
             return new StaticAnnouncementEvent(new Duration(System.nanoTime() - startTime, TimeUnit.NANOSECONDS), announcement, success, serviceId, remoteAddress);
         }
-        
-        public StaticAnnouncementEvent post ()
+
+        public StaticAnnouncementEvent post()
         {
             StaticAnnouncementEvent event = build();
-            eventClient.post(event);
+            if (config.isEventEnabled(DiscoveryEventType.STATICANNOUNCE)) {
+                eventClient.post(event);
+            }
             return event;
         }
     }
@@ -90,7 +94,7 @@ public class StaticAnnouncementEvent
     {
         return duration.toMillis();
     }
-    
+
     @EventField
     public String getRemoteAddress()
     {

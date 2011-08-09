@@ -8,6 +8,7 @@ import com.google.inject.Scopes;
 import com.proofpoint.cassandra.CassandraServerInfo;
 import com.proofpoint.configuration.ConfigurationModule;
 import com.proofpoint.discovery.client.ServiceSelectorFactory;
+import com.proofpoint.discovery.event.DiscoveryEventConfig;
 import com.proofpoint.discovery.event.DiscoveryEvents;
 import com.proofpoint.event.client.EventBinder;
 import com.proofpoint.node.NodeInfo;
@@ -17,7 +18,6 @@ import me.prettyprint.hector.api.Cluster;
 import me.prettyprint.hector.api.factory.HFactory;
 import org.joda.time.DateTime;
 import org.weakref.jmx.guice.MBeanModule;
-
 import static java.lang.String.format;
 
 public class DiscoveryModule
@@ -26,13 +26,17 @@ public class DiscoveryModule
     @Override
     public void configure(Binder binder)
     {
+        //HTTP Services
         binder.bind(DynamicAnnouncementResource.class).in(Scopes.SINGLETON);
         binder.bind(StaticAnnouncementResource.class).in(Scopes.SINGLETON);
         MBeanModule.newExporter(binder).export(StaticAnnouncementResource.class).withGeneratedName();
         binder.bind(ServiceResource.class).in(Scopes.SINGLETON);
         
+        //Events
         binder.bind(DiscoveryEvents.class).in(Scopes.SINGLETON);
         EventBinder.eventBinder(binder).bindEventClient(DiscoveryEvents.getAllEventClasses());
+        ConfigurationModule.bindConfig(binder).to(DiscoveryEventConfig.class);
+        MBeanModule.newExporter(binder).export(DiscoveryEventConfig.class).withGeneratedName();
 
         binder.bind(DynamicStore.class).to(CassandraDynamicStore.class).in(Scopes.SINGLETON);
         binder.bind(CassandraDynamicStore.class).in(Scopes.SINGLETON);
