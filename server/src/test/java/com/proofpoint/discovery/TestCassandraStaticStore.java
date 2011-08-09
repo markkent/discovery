@@ -2,6 +2,7 @@ package com.proofpoint.discovery;
 
 import com.proofpoint.cassandra.testing.CassandraServerSetup;
 import com.proofpoint.node.NodeInfo;
+import com.proofpoint.units.Duration;
 import me.prettyprint.hector.api.Cluster;
 import org.apache.cassandra.config.ConfigurationException;
 import org.apache.thrift.transport.TTransportException;
@@ -12,6 +13,7 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.testng.Assert.assertEquals;
@@ -31,7 +33,7 @@ public class TestCassandraStaticStore
         Cluster cluster = new DiscoveryModule().getCluster(CassandraServerSetup.getServerInfo(), new NodeInfo("testing"));
 
         Assert.assertTrue(new CassandraSchemaInitialization(cluster, storeConfig).waitForInit());
-        staticStore = new CassandraStaticStore(storeConfig, cluster, new TestingTimeProvider(), new DiscoveryConfig());
+        staticStore = new CassandraStaticStore(storeConfig, cluster, new TestingTimeProvider(), new DiscoveryConfig().setStaticServiceCacheRefresh(new Duration(1, TimeUnit.MINUTES)));
  
         return new StaticStore()
         {

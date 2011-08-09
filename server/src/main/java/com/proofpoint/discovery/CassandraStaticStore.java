@@ -50,6 +50,7 @@ public class CassandraStaticStore
     private final Provider<DateTime> currentTime;
     private final Cluster cluster;
     private final CassandraStoreConfig config;
+    private final Duration cacheRefreshDuration;
 
     private final AtomicReference<Set<Service>> services = new AtomicReference<Set<Service>>(ImmutableSet.<Service>of());
     private final ScheduledExecutorService loader = new ScheduledThreadPoolExecutor(1);
@@ -71,6 +72,7 @@ public class CassandraStaticStore
         this.storePutStats = new TimedStat(discoveryConfig.getStatsWindowSize());
         this.storeDeleteStats = new TimedStat(discoveryConfig.getStatsWindowSize());
         this.storeLoadAllStats = new TimedStat(discoveryConfig.getStatsWindowSize());
+        this.cacheRefreshDuration = discoveryConfig.getStaticServiceCacheRefresh();
     }
 
     @PostConstruct
@@ -92,7 +94,7 @@ public class CassandraStaticStore
                                                   log.error(e);
                                               }
                                           }
-                                      }, 0, 5, TimeUnit.SECONDS);
+                                      }, 0,(long)cacheRefreshDuration.convertTo(TimeUnit.SECONDS), TimeUnit.SECONDS);
 
     }
 
