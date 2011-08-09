@@ -35,7 +35,15 @@ public class TestCassandraDynamicStore
         cassandraStore = new CassandraDynamicStore(storeConfig, config, timeProvider, cluster);
         Assert.assertTrue(new CassandraSchemaInitialization(cluster, storeConfig).waitForInit());
         cassandraStore.initialize();
-        
+        //somehow the first reload on the initialize kicks in delayed and so the tests fail since looks like the reload gets called in along with the explicit reload
+        // resulting in unexpected stats and hence test failures
+        try {
+            Thread.sleep(500);
+        }
+        catch (InterruptedException e) {
+            //do nothing
+        }
+
         return new DynamicStore()
         {
             @Override

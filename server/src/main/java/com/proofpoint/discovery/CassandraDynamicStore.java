@@ -54,6 +54,7 @@ public class CassandraDynamicStore
 
     private Keyspace keyspace;
     private final Duration maxAge;
+    private final Duration cacheReloadDuration;
     private final CassandraStoreConfig config;
     private final Cluster cluster;
 
@@ -79,6 +80,7 @@ public class CassandraDynamicStore
         this.dynamicStorePutStats = new TimedStat(discoveryConfig.getStatsWindowSize());
         this.dynamicStoreDeleteStats = new TimedStat(discoveryConfig.getStatsWindowSize());
         this.dynamicStoreLoadAllStats = new TimedStat(discoveryConfig.getStatsWindowSize());
+        this.cacheReloadDuration = discoveryConfig.getDynamicServiceCacheRefresh();
     }
 
     @PostConstruct
@@ -103,7 +105,7 @@ public class CassandraDynamicStore
                                                   log.error(e);
                                               }
                                           }
-                                      }, 0, 1, TimeUnit.SECONDS);
+                                      }, 0, (long)this.cacheReloadDuration.convertTo(TimeUnit.SECONDS), TimeUnit.SECONDS);
     }
 
     @PreDestroy
