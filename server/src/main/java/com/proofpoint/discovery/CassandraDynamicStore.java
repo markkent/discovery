@@ -1,5 +1,35 @@
 package com.proofpoint.discovery;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
+import com.proofpoint.json.JsonCodec;
+import com.proofpoint.log.Logger;
+import com.proofpoint.stats.TimedStat;
+import com.proofpoint.units.Duration;
+import me.prettyprint.cassandra.model.AllOneConsistencyLevelPolicy;
+import me.prettyprint.cassandra.serializers.StringSerializer;
+import me.prettyprint.hector.api.Cluster;
+import me.prettyprint.hector.api.Keyspace;
+import me.prettyprint.hector.api.beans.HColumn;
+import me.prettyprint.hector.api.beans.Row;
+import me.prettyprint.hector.api.factory.HFactory;
+import org.joda.time.DateTime;
+import org.weakref.jmx.Managed;
+import org.weakref.jmx.Nested;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.inject.Inject;
+import javax.inject.Provider;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
 import static com.google.common.base.Predicates.and;
 import static com.google.common.collect.Collections2.transform;
 import static com.google.common.collect.ImmutableList.copyOf;
@@ -9,36 +39,6 @@ import static com.proofpoint.discovery.CassandraPaginator.paginate;
 import static com.proofpoint.discovery.DynamicServiceAnnouncement.toServiceWith;
 import static com.proofpoint.discovery.Service.matchesPool;
 import static com.proofpoint.discovery.Service.matchesType;
-
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.inject.Inject;
-import javax.inject.Provider;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
-import com.proofpoint.json.JsonCodec;
-import com.proofpoint.log.Logger;
-import com.proofpoint.units.Duration;
-
-import me.prettyprint.cassandra.model.AllOneConsistencyLevelPolicy;
-import me.prettyprint.cassandra.serializers.StringSerializer;
-import me.prettyprint.hector.api.Cluster;
-import me.prettyprint.hector.api.Keyspace;
-import me.prettyprint.hector.api.beans.HColumn;
-import me.prettyprint.hector.api.beans.Row;
-import me.prettyprint.hector.api.factory.HFactory;
-
-import org.joda.time.DateTime;
 
 public class CassandraDynamicStore
         implements DynamicStore
@@ -61,6 +61,9 @@ public class CassandraDynamicStore
     private final Provider<DateTime> currentTime;
 
     private final AtomicReference<Set<Service>> services = new AtomicReference<Set<Service>>(ImmutableSet.<Service>of());
+    private final TimedStat dynamicStorePutStats;
+    private final TimedStat dynamicStoreDeleteStats;
+    private final TimedStat dynamicStoreLoadAllStats;
 
     @Inject
     public CassandraDynamicStore(
@@ -72,7 +75,10 @@ public class CassandraDynamicStore
         this.currentTime = currentTime;
         this.config = config;
         this.cluster = cluster;
-        maxAge = discoveryConfig.getMaxAge();
+        this.maxAge = discoveryConfig.getMaxAge();
+        this.dynamicStorePutStats = new TimedStat(discoveryConfig.getStatsWindowSize());
+        this.dynamicStoreDeleteStats = new TimedStat(discoveryConfig.getStatsWindowSize());
+        this.dynamicStoreLoadAllStats = new TimedStat(discoveryConfig.getStatsWindowSize());
     }
 
     @PostConstruct
@@ -112,6 +118,7 @@ public class CassandraDynamicStore
         Preconditions.checkNotNull(nodeId, "nodeId is null");
         Preconditions.checkNotNull(announcement, "announcement is null");
 
+        long startTime = System.nanoTime();
         List<Service> services = copyOf(transform(announcement.getServiceAnnouncements(), toServiceWith(nodeId, announcement.getLocation(), announcement.getPool())));
         String value = codec.toJson(services);
 
@@ -123,13 +130,14 @@ public class CassandraDynamicStore
         HFactory.createMutator(keyspace, StringSerializer.get())
                 .addInsertion(nodeId.toString(), COLUMN_FAMILY, column)
                 .execute();
-
+        dynamicStorePutStats.addValue(Duration.nanosSince(startTime));
         return true;
     }
 
     @Override
     public boolean delete(Id<Node> nodeId)
     {
+        long startTime = System.nanoTime();
         HColumn<String, String> column = HFactory.createColumnQuery(keyspace, StringSerializer.get(), StringSerializer.get(), StringSerializer.get())
                 .setColumnFamily(COLUMN_FAMILY)
                 .setKey(nodeId.toString())
@@ -144,7 +152,7 @@ public class CassandraDynamicStore
         HFactory.createMutator(keyspace, StringSerializer.get())
                 .addDeletion(nodeId.toString(), COLUMN_FAMILY, currentTime.get().getMillis())
                 .execute();
-
+        dynamicStoreDeleteStats.addValue(Duration.nanosSince(startTime));
         return exists;
     }
 
@@ -168,6 +176,7 @@ public class CassandraDynamicStore
     @VisibleForTesting
     void reload()
     {
+        long startTime = System.nanoTime();
         ImmutableSet.Builder<Service> builder = ImmutableSet.builder();
 
         CassandraPaginator.PageQuery<String, String, String> query = new CassandraPaginator.PageQuery<String, String, String>()
@@ -194,11 +203,33 @@ public class CassandraDynamicStore
         }
 
         services.set(builder.build());
+        dynamicStoreLoadAllStats.addValue(Duration.nanosSince(startTime));
     }
 
 
     private DateTime expirationCutoff()
     {
         return currentTime.get().minusMillis((int) maxAge.toMillis());
+    }
+
+    @Managed
+    @Nested
+    public TimedStat getDynamicStorePutStats()
+    {
+        return dynamicStorePutStats;
+    }
+
+    @Managed
+    @Nested
+    public TimedStat getDynamicStoreDeleteStats()
+    {
+        return dynamicStoreDeleteStats;
+    }
+
+    @Managed
+    @Nested
+    public TimedStat getDynamicStoreLoadAllStats()
+    {
+        return dynamicStoreLoadAllStats;
     }
 }

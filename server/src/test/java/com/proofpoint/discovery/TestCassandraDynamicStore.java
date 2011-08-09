@@ -17,6 +17,8 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.testng.Assert.assertEquals;
+
 public class TestCassandraDynamicStore
         extends TestDynamicStore
 {
@@ -96,4 +98,107 @@ public class TestCassandraDynamicStore
     {
         cassandraStore.initialize();
     }
+
+    @Override
+    @Test
+    public void testEmpty()
+    {
+        long count = cassandraStore.getDynamicStoreLoadAllStats().getCount();
+        super.testEmpty();
+        assertEquals(cassandraStore.getDynamicStoreLoadAllStats().getCount() - count, 1);
+    }
+
+    @Override
+    @Test
+    public void testPutSingle()
+    {
+        long count = cassandraStore.getDynamicStorePutStats().getCount();
+        super.testPutSingle();
+        assertEquals(cassandraStore.getDynamicStorePutStats().getCount() - count, 1);
+    }
+
+    @Override
+    @Test
+    public void testExpires()
+    {
+        super.testExpires();
+    }
+
+    @Override
+    @Test
+    public void testPutMultipleForSameNode()
+    {
+        long count = cassandraStore.getDynamicStorePutStats().getCount();
+        super.testPutMultipleForSameNode();
+        assertEquals(cassandraStore.getDynamicStorePutStats().getCount() - count, 1);
+    }
+
+    @Override
+    @Test
+    public void testReplace()
+    {
+        long count = cassandraStore.getDynamicStorePutStats().getCount();
+        super.testReplace();
+        assertEquals(cassandraStore.getDynamicStorePutStats().getCount() - count, 2);
+    }
+
+    @Override
+    @Test
+    public void testReplaceExpired()
+    {
+        long count = cassandraStore.getDynamicStorePutStats().getCount();
+        super.testReplaceExpired();
+        assertEquals(cassandraStore.getDynamicStorePutStats().getCount() - count, 2);
+    }
+
+    @Override
+    @Test
+    public void testPutMultipleForDifferentNodes()
+    {
+        long count = cassandraStore.getDynamicStorePutStats().getCount();
+        super.testPutMultipleForDifferentNodes();
+        assertEquals(cassandraStore.getDynamicStorePutStats().getCount() - count, 3);
+    }
+
+    @Override
+    @Test
+    public void testGetByType()
+    {
+        long count = cassandraStore.getDynamicStoreLoadAllStats().getCount();
+        super.testGetByType();
+        assertEquals(cassandraStore.getDynamicStoreLoadAllStats().getCount() - count, 2);
+    }
+
+    @Override
+    @Test
+    public void testGetByTypeAndPool()
+    {
+        long count = cassandraStore.getDynamicStoreLoadAllStats().getCount();
+        super.testGetByTypeAndPool();
+        assertEquals(cassandraStore.getDynamicStoreLoadAllStats().getCount() - count, 3);
+    }
+
+    @Override
+    @Test
+    public void testDelete()
+    {
+        long count = cassandraStore.getDynamicStoreDeleteStats().getCount();
+        super.testDelete();
+        assertEquals(cassandraStore.getDynamicStoreDeleteStats().getCount() - count, 1);
+    }
+
+    @Override
+    @Test
+    public void testDeleteThenReInsert()
+    {
+        super.testDeleteThenReInsert();
+    }
+
+    @Override
+    @Test
+    public void testCanHandleLotsOfAnnouncements()
+    {
+        super.testCanHandleLotsOfAnnouncements();
+    }
+
 }
