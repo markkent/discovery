@@ -7,6 +7,7 @@ import com.proofpoint.node.NodeInfo;
 import com.proofpoint.stats.TimedStat;
 import com.proofpoint.units.Duration;
 import org.weakref.jmx.Managed;
+import org.weakref.jmx.Nested;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -113,18 +114,21 @@ public class ServiceResource
     }
 
     @Managed
+    @Nested
     public TimedStat getByTypeAndPoolStats()
     {
         return byTypeAndPoolStats;
     }
 
     @Managed
+    @Nested
     public TimedStat getByTypeStats()
     {
         return byTypeStats;
     }
 
     @Managed
+    @Nested
     public TimedStat getAllServicesStats()
     {
         return allServicesStats;

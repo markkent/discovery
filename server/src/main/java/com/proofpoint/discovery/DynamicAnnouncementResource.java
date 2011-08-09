@@ -8,6 +8,7 @@ import com.proofpoint.node.NodeInfo;
 import com.proofpoint.stats.TimedStat;
 import com.proofpoint.units.Duration;
 import org.weakref.jmx.Managed;
+import org.weakref.jmx.Nested;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
@@ -20,7 +21,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.String.format;
@@ -116,12 +116,14 @@ public class DynamicAnnouncementResource
     }
 
     @Managed
+    @Nested
     public TimedStat getDynamicPutStats()
     {
         return dynamicPutStats;
     }
 
     @Managed
+    @Nested
     public TimedStat getDynamicDeleteStats()
     {
         return dynamicDeleteStats;

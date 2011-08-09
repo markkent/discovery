@@ -9,6 +9,7 @@ import com.proofpoint.node.NodeInfo;
 import com.proofpoint.stats.TimedStat;
 import com.proofpoint.units.Duration;
 import org.weakref.jmx.Managed;
+import org.weakref.jmx.Nested;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
@@ -148,18 +149,21 @@ public class StaticAnnouncementResource
     }
 
     @Managed
+    @Nested
     public TimedStat getStaticPostStats()
     {
         return staticPostStats;
     }
 
     @Managed
+    @Nested
     public TimedStat getStaticGetStats()
     {
         return staticGetStats;
     }
 
     @Managed
+    @Nested
     public TimedStat getStaticDeleteStats()
     {
         return staticDeleteStats;
