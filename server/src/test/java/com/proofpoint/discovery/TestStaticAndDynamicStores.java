@@ -26,7 +26,7 @@ public class TestStaticAndDynamicStores
 
         Cluster cluster = new DiscoveryModule().getCluster(CassandraServerSetup.getServerInfo(), new NodeInfo("testing"));
 
-        CassandraStaticStore staticStore = new CassandraStaticStore(storeConfig, cluster, new TestingTimeProvider());
+        CassandraStaticStore staticStore = new CassandraStaticStore(storeConfig, cluster, new TestingTimeProvider(), new DiscoveryConfig());
         CassandraDynamicStore dynamicStore = new CassandraDynamicStore(storeConfig, new DiscoveryConfig(), new TestingTimeProvider(), cluster);
         new CassandraSchemaInitialization(cluster, storeConfig).waitForInit();
         dynamicStore.initialize();

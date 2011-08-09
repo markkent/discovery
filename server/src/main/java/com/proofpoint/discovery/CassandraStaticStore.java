@@ -1,29 +1,11 @@
 package com.proofpoint.discovery;
 
-import static com.google.common.base.Predicates.and;
-import static com.google.common.collect.Iterables.filter;
-import static com.proofpoint.discovery.CassandraPaginator.paginate;
-import static com.proofpoint.discovery.Service.matchesPool;
-import static com.proofpoint.discovery.Service.matchesType;
-
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.inject.Inject;
-import javax.inject.Provider;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.proofpoint.json.JsonCodec;
 import com.proofpoint.log.Logger;
-
+import com.proofpoint.stats.TimedStat;
+import com.proofpoint.units.Duration;
 import me.prettyprint.cassandra.model.QuorumAllConsistencyLevelPolicy;
 import me.prettyprint.cassandra.serializers.StringSerializer;
 import me.prettyprint.hector.api.Cluster;
@@ -32,8 +14,27 @@ import me.prettyprint.hector.api.beans.HColumn;
 import me.prettyprint.hector.api.beans.Row;
 import me.prettyprint.hector.api.factory.HFactory;
 import me.prettyprint.hector.api.mutation.Mutator;
-
 import org.joda.time.DateTime;
+import org.weakref.jmx.Managed;
+import org.weakref.jmx.Nested;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.inject.Inject;
+import javax.inject.Provider;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static com.google.common.base.Predicates.and;
+import static com.google.common.collect.Iterables.filter;
+import static com.proofpoint.discovery.CassandraPaginator.paginate;
+import static com.proofpoint.discovery.Service.matchesPool;
+import static com.proofpoint.discovery.Service.matchesType;
 
 public class CassandraStaticStore
         implements StaticStore
@@ -53,9 +54,13 @@ public class CassandraStaticStore
     private final AtomicReference<Set<Service>> services = new AtomicReference<Set<Service>>(ImmutableSet.<Service>of());
     private final ScheduledExecutorService loader = new ScheduledThreadPoolExecutor(1);
     private final AtomicBoolean initialized = new AtomicBoolean(false);
+    private final TimedStat storePutStats;
+    private final TimedStat storeDeleteStats;
+    private final TimedStat storeLoadAllStats;
+
 
     @Inject
-    public CassandraStaticStore(CassandraStoreConfig config, Cluster cluster, Provider<DateTime> currentTime)
+    public CassandraStaticStore(CassandraStoreConfig config, Cluster cluster, Provider<DateTime> currentTime, DiscoveryConfig discoveryConfig)
     {
         this.currentTime = currentTime;
         this.cluster = cluster;
@@ -63,6 +68,9 @@ public class CassandraStaticStore
         
         keyspace = HFactory.createKeyspace(config.getKeyspace(), cluster);
         keyspace.setConsistencyLevelPolicy(new QuorumAllConsistencyLevelPolicy());
+        this.storePutStats = new TimedStat(discoveryConfig.getStatsWindowSize());
+        this.storeDeleteStats = new TimedStat(discoveryConfig.getStatsWindowSize());
+        this.storeLoadAllStats = new TimedStat(discoveryConfig.getStatsWindowSize());
     }
 
     @PostConstruct
@@ -97,19 +105,23 @@ public class CassandraStaticStore
     @Override
     public void put(Service service)
     {
+        long startTime = System.nanoTime();
         String value = codec.toJson(ImmutableList.of(service));
 
         HFactory.createMutator(keyspace, StringSerializer.get())
                 .addInsertion(service.getId().toString(), COLUMN_FAMILY, HFactory.createColumn(COLUMN_NAME, value, currentTime.get().getMillis(), StringSerializer.get(), StringSerializer.get()))
                 .execute();
+        storePutStats.addValue(Duration.nanosSince(startTime));
     }
 
     @Override
     public void delete(Id<Service> id)
     {
+        long startTime = System.nanoTime();
         Mutator<String> mutator = HFactory.createMutator(keyspace, StringSerializer.get());
         mutator.addDeletion(id.toString(), COLUMN_FAMILY, currentTime.get().getMillis());
         mutator.execute();
+        storeDeleteStats.addValue(Duration.nanosSince(startTime));
     }
 
     @Override
@@ -132,6 +144,7 @@ public class CassandraStaticStore
 
     void reload()
     {
+        long startTime = System.nanoTime();
         ImmutableSet.Builder<Service> builder = ImmutableSet.builder();
 
         CassandraPaginator.PageQuery<String, String, String> query = new CassandraPaginator.PageQuery<String, String, String>()
@@ -157,5 +170,27 @@ public class CassandraStaticStore
         }
 
         services.set(builder.build());
+        storeLoadAllStats.addValue(Duration.nanosSince(startTime));
+    }
+
+    @Managed
+    @Nested
+    public TimedStat getStorePutStats()
+    {
+        return storePutStats;
+    }
+
+    @Managed
+    @Nested
+    public TimedStat getStoreDeleteStats()
+    {
+        return storeDeleteStats;
+    }
+
+    @Managed
+    @Nested
+    public TimedStat getStoreLoadAllStats()
+    {
+        return storeLoadAllStats;
     }
 }
