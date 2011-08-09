@@ -47,7 +47,7 @@ class SDiscoveryCommand
       opts.banner = "Usage: #{opts.program_name()} show alias|URL [OUTPUT_OPTION]"
 
       opts.on('-h', '--help', 'Display this screen') do
-        @help_message= to_s()
+        @help_message= @show_parser.help()
       end
 
       opts.on('--output FMT', '-o', %w{JSON json ID id}, 'Output option: format JSON or ID') do |value|
@@ -59,7 +59,7 @@ class SDiscoveryCommand
       opts.banner = "Usage: #{opts.program_name()} add alias|URL [OUTPUT_OPTION] SERVICE_DEFINITION"
 
       opts.on('-h', '--help', 'Display this screen') do
-        @help_message= to_s()
+        @help_message= @add_parser.help()
       end
 
       opts.on('--output FMT', '-o', %w{JSON json ID id}, 'Output option: format JSON or ID') do |value|
@@ -106,7 +106,7 @@ class SDiscoveryCommand
       opts.banner = "Usage: #{opts.program_name()} delete alias|URL ID"
 
       opts.on('-h', '--help', 'Display this screen') do
-        @help_message= to_s()
+        @help_message= @delete_parser.help()
       end
     end
 
@@ -184,6 +184,7 @@ class SDiscoveryCommand
     # Pull dashed options
     begin
       @add_parser.parse!(args)
+      return if help?
     rescue OptionParser::ParseError => err
       raise "#{err}\n#{@add_parser}"
     end
@@ -226,6 +227,7 @@ class SDiscoveryCommand
 
     begin
       @show_parser.parse!(args)
+      return if help?
     rescue OptionParser::ParseError => err
       raise "#{err}\n#{@show_parser}"
     end
@@ -237,10 +239,16 @@ class SDiscoveryCommand
 
   def parse_delete_command (args)
     @id = args.pop() or err_missing("service identifier", @delete_parser)
+    if (@id[0,1] == '-')
+      @help_message = @delete_parser.help()
+      return
+    end
+    
     parse_hosts(args)
 
     begin
       @delete_parser.parse!(args)
+      return if help?
     rescue OptionParser::ParseError => err
       raise "#{err}\n#{@delete_parser}"
     end
