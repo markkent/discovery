@@ -8,28 +8,27 @@ class SDiscoveryCommand
 
   # Map of options that defined the operation.  See command().
   @option_map
-  
+
   # Map of options that produced JSON - the @static_announcement
   @json_map
-  
+
   # Array of hosts.  Defaults to 'http://localhost:8080'
   @hosts
-  
+
   # Service ID when deleting
   @id
-  
+
   # Static announcement to be JSON encoded
   @static_announcement
-  
+
   # If help was needed, the message goes here.  See help?().
   @help_message
-  
+
   @show_parser
   @add_parser
   @delete_parser
 
   attr_reader :option_map, :json_map, :hosts, :id, :static_announcement, :help_message
-  
   # Returns 'ADD', 'SHOW', 'DELETE', or 'HELP'
   def command ()
     return @option_map[:command]
@@ -41,7 +40,6 @@ class SDiscoveryCommand
   end
 
   def initialize (args)
-    puts args.join(",")
     @option_map = {}
     @json_map = {}
 
@@ -84,8 +82,14 @@ class SDiscoveryCommand
         @json_map[:location]=value
       end
 
-      opts.on('-Dkey=value', "Service definition: Add key=value property") do
-        #Used only for help.  OptionParser doesn't support this format.
+      opts.on("-D<key>=<value>", "Sets a service property") do |value|
+        value.scan(/(\w+)=(.*)/) do |k,v|
+          if @option_map[:properties].nil?
+            @option_map[:properties] = {k => v};
+          else
+            @option_map[:properties][k]=v;
+          end
+        end
       end
 
       opts.on('--JSON JSON', '-j', "Service definition: Specify entire raw JSON data") do |value|
@@ -107,7 +111,7 @@ class SDiscoveryCommand
     end
 
 
-    @option_map[:command]= (args.shift() || "?").upcase()
+    @option_map[:command]= (args.shift() or "?").upcase()
 
     case @option_map[:command]
       when "ADD"
@@ -124,8 +128,13 @@ class SDiscoveryCommand
   private
 
   # Exit for missing argument
+  def err_missing_option (message, usage)
+    err_missing("argument --#{message}", usage)
+  end
+
+  # Exit for missing field
   def err_missing (message, usage)
-    raise "Missing argument --#{message}\n#{usage}"
+    raise "Missing #{message}\n#{usage}"
   end
 
   # Exit for extra k/v arguments
@@ -148,7 +157,7 @@ class SDiscoveryCommand
   # Default is localhost entry in .disoveryrc or http://localhost:8080
   # Set result in @hosts array
   def parse_hosts (args)
-    host_arg = (args.empty? || (args[0][0] == '-')) ? 'localhost' : args.shift()
+    host_arg = (args.empty? || (args[0][0,1] == '-')) ? 'localhost' : args.shift()
     discoveryrc = File.expand_path("~/.discoveryrc")
     aliasmap = {}
     if File.readable?(discoveryrc)
@@ -172,17 +181,6 @@ class SDiscoveryCommand
     #Pull host
     parse_hosts(args)
 
-    # Pull -Dkey=value property arguments
-    args.reject!() do |arg|
-      arg =~ /-D\w+=.*/ && arg.scan(/-D(\w+)=(.*)/) do |k,v|
-        if @option_map[:properties].nil?()
-          @option_map[:properties] = {k => v};
-        else
-          @option_map[:properties][k]=v;
-        end
-      end
-    end
-
     # Pull dashed options
     begin
       @add_parser.parse!(args)
@@ -191,12 +189,12 @@ class SDiscoveryCommand
     end
 
     #Check argument list is now empty
-    if !args.empty?()
+    if !args.empty?
       err_extra_arg(args, @add_parser)
     end
 
     # Check conflict - StaticAnnouncement options with JSON input
-    if (@option_map[:jsonfile] || @option_map[:json]) && !@json_map.empty?()
+    if (@option_map[:jsonfile] || @option_map[:json]) && !@json_map.empty?
       err_extra_kv(@json_map, @add_parser)
     end
 
@@ -214,9 +212,9 @@ class SDiscoveryCommand
       end
     else
       @static_announcement= {}
-      @static_announcement['environment'] = @json_map[:environment] || err_missing(:environment, @add_parser)
-      @static_announcement['type'] = @json_map[:type] || err_missing(:type, @add_parser)
-      @static_announcement['pool'] = @json_map[:pool] || err_missing(:pool, @add_parser)
+      @static_announcement['environment'] = @json_map[:environment] or err_missing_option(:environment, @add_parser)
+      @static_announcement['type'] = @json_map[:type] or err_missing_option(:type, @add_parser)
+      @static_announcement['pool'] = @json_map[:pool] or err_missing_option(:pool, @add_parser)
       @static_announcement['location'] = @json_map[:location]
       @static_announcement['properties']= @json_map[:properties]
     end
@@ -232,12 +230,13 @@ class SDiscoveryCommand
       raise "#{err}\n#{@show_parser}"
     end
 
-    if !args.empty?()
+    if !args.empty?
       err_extra_arg(args, @show_parser)
     end
   end
 
   def parse_delete_command (args)
+    @id = args.pop() or err_missing("service identifier", @delete_parser)
     parse_hosts(args)
 
     begin
@@ -246,6 +245,5 @@ class SDiscoveryCommand
       raise "#{err}\n#{@delete_parser}"
     end
 
-    @id = args.shift() || err_missing("service identifier", @delete_parser)
   end
 end
