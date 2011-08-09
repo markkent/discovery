@@ -47,7 +47,7 @@ class SDiscoveryCommand
       opts.banner = "Usage: #{opts.program_name()} show alias|URL [OUTPUT_OPTION]"
 
       opts.on('-h', '--help', 'Display this screen') do
-        @help_message= help()
+        @help_message= to_s()
       end
 
       opts.on('--output FMT', '-o', %w{JSON json ID id}, 'Output option: format JSON or ID') do |value|
@@ -59,7 +59,7 @@ class SDiscoveryCommand
       opts.banner = "Usage: #{opts.program_name()} add alias|URL [OUTPUT_OPTION] SERVICE_DEFINITION"
 
       opts.on('-h', '--help', 'Display this screen') do
-        @help_message= help()
+        @help_message= to_s()
       end
 
       opts.on('--output FMT', '-o', %w{JSON json ID id}, 'Output option: format JSON or ID') do |value|
@@ -106,7 +106,7 @@ class SDiscoveryCommand
       opts.banner = "Usage: #{opts.program_name()} delete alias|URL ID"
 
       opts.on('-h', '--help', 'Display this screen') do
-        @help_message= help()
+        @help_message= to_s()
       end
     end
 
