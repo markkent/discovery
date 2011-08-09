@@ -79,13 +79,13 @@ public class QueryEvent
     }
     
     @EventField
-    public String getTypeQuery ()
+    public String getType ()
     {
         return type;
     }
     
     @EventField
-    public String getPoolQuery ()
+    public String getPool ()
     {
         return pool;
     }
