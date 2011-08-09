@@ -2,6 +2,7 @@ package com.proofpoint.discovery;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.proofpoint.discovery.event.DiscoveryEventConfig;
 import com.proofpoint.discovery.event.DiscoveryEvents;
 import com.proofpoint.event.client.InMemoryEventClient;
 import com.proofpoint.jaxrs.testing.MockUriInfo;
@@ -28,7 +29,7 @@ public class TestDynamicAnnouncementResource
     public void setup()
     {
         store = new InMemoryDynamicStore(new DiscoveryConfig(), new RealTimeProvider());
-        resource = new DynamicAnnouncementResource(store, new NodeInfo("testing"), new DiscoveryEvents(new InMemoryEventClient()));
+        resource = new DynamicAnnouncementResource(store, new NodeInfo("testing"), new DiscoveryEvents(new InMemoryEventClient(), new DiscoveryEventConfig().setEnabledEvents("")));
     }
 
     @Test

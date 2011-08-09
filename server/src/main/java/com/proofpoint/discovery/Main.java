@@ -10,6 +10,8 @@ import com.proofpoint.json.JsonModule;
 import com.proofpoint.log.Logger;
 import com.proofpoint.node.NodeModule;
 
+import org.weakref.jmx.guice.MBeanModule;
+
 public class Main
 {
     private final static Logger log = Logger.get(Main.class);
@@ -22,6 +24,7 @@ public class Main
                                           new HttpServerModule(),
                                           new JaxrsModule(),
                                           new JsonModule(),
+                                          new MBeanModule(),
                                           new JmxModule(),
                                           new DiscoveryModule(),
                                           new HttpEventModule()).strictConfig();

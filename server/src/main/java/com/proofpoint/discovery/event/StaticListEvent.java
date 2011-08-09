@@ -16,12 +16,14 @@ public class StaticListEvent
     {
         private final long startTime = System.nanoTime();
         private final EventClient eventClient;
+        private final DiscoveryEventConfig config;
         private boolean success;
         private int serviceCount;
-        
-        Builder (EventClient eventClient)
+
+        Builder(EventClient eventClient, DiscoveryEventConfig config)
         {
             this.eventClient = eventClient;
+            this.config = config;
         }
 
         public Builder setSuccess()
@@ -33,7 +35,9 @@ public class StaticListEvent
         public StaticListEvent post()
         {
             StaticListEvent event = build();
-            eventClient.post(event);
+            if (config.isEventEnabled(DiscoveryEventType.STATICLIST)) {
+                eventClient.post(event);
+            }
             return event;
         }
 
@@ -48,26 +52,26 @@ public class StaticListEvent
             return this;
         }
     }
-    
+
     private final Duration duration;
     private final int resultCount;
     private final boolean success;
-    
+
     StaticListEvent(Duration duration, int resultCount, boolean success)
     {
         this.duration = duration;
         this.resultCount = resultCount;
         this.success = success;
     }
-    
+
     @EventField
     public double getDuration()
     {
         return duration.toMillis();
     }
-    
+
     @EventField
-    public int getResultCount ()
+    public int getResultCount()
     {
         return resultCount;
     }

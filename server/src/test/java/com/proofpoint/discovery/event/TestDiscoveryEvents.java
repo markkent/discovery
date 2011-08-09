@@ -23,7 +23,6 @@ import org.testng.annotations.Test;
 
 public class TestDiscoveryEvents
 {
-
     DiscoveryEvents discoveryEvents;
     InMemoryEventClient eventClient;
 
@@ -31,13 +30,14 @@ public class TestDiscoveryEvents
     public void setup()
     {
         eventClient = new InMemoryEventClient();
-        discoveryEvents = new DiscoveryEvents(eventClient);
+        discoveryEvents = new DiscoveryEvents(eventClient, new DiscoveryEventConfig().setEnabledEvents("*"));
     }
 
     @Test
     public void testGetAllEventClasses()
     {
-        @SuppressWarnings("unchecked") HashSet<Class<?>> expected = new HashSet<Class<?>>(Arrays.asList(StaticAnnouncementEvent.class, StaticListEvent.class, StaticDeleteEvent.class,
+        @SuppressWarnings("unchecked")
+        HashSet<Class<?>> expected = new HashSet<Class<?>>(Arrays.asList(StaticAnnouncementEvent.class, StaticListEvent.class, StaticDeleteEvent.class,
                 DynamicAnnouncementEvent.class, DynamicDeleteEvent.class, QueryEvent.class));
         HashSet<Class<?>> actual = new HashSet<Class<?>>(Arrays.asList(DiscoveryEvents.getAllEventClasses()));
         Assert.assertEquals(actual, expected);
@@ -218,7 +218,7 @@ public class TestDiscoveryEvents
         Object postedObject = eventClient.getEvents().get(0);
         Assert.assertEquals(postedObject.getClass(), StaticAnnouncementEvent.class);
         StaticAnnouncementEvent postedEvent = (StaticAnnouncementEvent)postedObject;
-        Assert.assertEquals(postedEvent.getId(), id);
+        Assert.assertEquals(postedEvent.getId(), id.toString());
         Assert.assertEquals(postedEvent.getType(), type);
         Assert.assertEquals(postedEvent.getPool(), pool);
         Assert.assertEquals(postedEvent.getRemoteAddress(), address);
@@ -249,7 +249,7 @@ public class TestDiscoveryEvents
         Object postedObject = eventClient.getEvents().get(0);
         Assert.assertEquals(postedObject.getClass(), StaticDeleteEvent.class);
         StaticDeleteEvent postedEvent = (StaticDeleteEvent)postedObject;
-        Assert.assertEquals(postedEvent.getId(), id);
+        Assert.assertEquals(postedEvent.getId(), id.toString());
         Assert.assertEquals(postedEvent.getRemoteAddress(), address);
         Assert.assertEquals(postedEvent.isSuccess(), success);
         assertDuration (postedEvent.getDuration());
@@ -258,10 +258,26 @@ public class TestDiscoveryEvents
     @Test
     public void testGetStaticListEventBuilder()
     {
+        boolean success = RandomUtils.nextBoolean();
+        Set<Service> serviceSet = new HashSet<Service>();
+        for (int i = RandomUtils.nextInt(300); i > 0; --i) {
+            serviceSet.add(new Service(Id.<Service>random(), Id.<Node>random(), randomWord(), randomWord(), randomWord(), Collections.<String, String>emptyMap()));
+        }
+        
         StaticListEvent.Builder builder = discoveryEvents.getStaticListEventBuilder();
+        if (success) {
+            builder.setSuccess();
+        }
+        builder.setServiceSet(serviceSet);
         builder.post();
+        
         Assert.assertEquals(eventClient.getEvents().size(), 1);
-        Assert.assertEquals(eventClient.getEvents().get(0).getClass(), StaticListEvent.class);
+        Object postedObject = eventClient.getEvents().get(0);
+        Assert.assertEquals(postedObject.getClass(), StaticListEvent.class);
+        StaticListEvent postedEvent = (StaticListEvent)postedObject;
+        Assert.assertEquals(postedEvent.isSuccess(), success);
+        Assert.assertEquals(postedEvent.getResultCount(), serviceSet.size());
+        assertDuration (postedEvent.getDuration());
     }
 
     private void assertDuration (double d)
@@ -270,7 +286,7 @@ public class TestDiscoveryEvents
         Assert.assertTrue (d > 0d, String.valueOf(d));
     }
     
-    private static final Set<String> s_usedRandomWords = Collections.synchronizedSet(new HashSet<String>(128));
+    private static final Set<String> s_usedRandomWords = Collections.synchronizedSet(new HashSet<String>(4096));
     private static String randomWord()
     {
         String s;
