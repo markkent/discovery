@@ -7,6 +7,7 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.proofpoint.cassandra.CassandraServerInfo;
 import com.proofpoint.configuration.ConfigurationModule;
+import com.proofpoint.discovery.client.DiscoveryBinder;
 import com.proofpoint.node.NodeInfo;
 import me.prettyprint.cassandra.service.CassandraHostConfigurator;
 import me.prettyprint.cassandra.service.clock.MillisecondsClockResolution;
@@ -35,6 +36,8 @@ public class DiscoveryModule
 
         ConfigurationModule.bindConfig(binder).to(DiscoveryConfig.class);
         ConfigurationModule.bindConfig(binder).to(CassandraStoreConfig.class);
+
+        DiscoveryBinder.discoveryBinder(binder).bindHttpAnnouncement("discovery");
     }
 
     @Provides
