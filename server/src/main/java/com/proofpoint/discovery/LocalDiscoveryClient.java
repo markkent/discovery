@@ -1,12 +1,16 @@
 package com.proofpoint.discovery;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
 import com.proofpoint.discovery.client.DiscoveryClient;
 import com.proofpoint.discovery.client.DiscoveryException;
 import com.proofpoint.discovery.client.ServiceAnnouncement;
+import com.proofpoint.discovery.client.ServiceDescriptor;
 import com.proofpoint.discovery.client.ServiceDescriptors;
 import com.proofpoint.node.NodeInfo;
 import com.proofpoint.units.Duration;
@@ -15,12 +19,14 @@ import java.util.Set;
 
 public class LocalDiscoveryClient implements DiscoveryClient
 {
+    private final StaticStore staticStore;
     private final DynamicStore dynamicStore;
     private final NodeInfo nodeInfo;
 
     @Inject
-    public LocalDiscoveryClient(DynamicStore dynamicStore, NodeInfo nodeInfo)
+    public LocalDiscoveryClient(DynamicStore dynamicStore, StaticStore staticStore, NodeInfo nodeInfo)
     {
+        this.staticStore = staticStore;
         this.dynamicStore = dynamicStore;
         this.nodeInfo = nodeInfo;
     }
@@ -46,12 +52,33 @@ public class LocalDiscoveryClient implements DiscoveryClient
     @Override
     public CheckedFuture<ServiceDescriptors, DiscoveryException> getServices(String type, String pool)
     {
-        throw new UnsupportedOperationException();
+        Preconditions.checkNotNull(type, "type is null");
+        Preconditions.checkNotNull(pool, "pool is null");
+        return lookup(type, pool);
     }
 
     @Override
     public CheckedFuture<ServiceDescriptors, DiscoveryException> refreshServices(ServiceDescriptors serviceDescriptors)
     {
-        throw new UnsupportedOperationException();
+        Preconditions.checkNotNull(serviceDescriptors, "serviceDescriptors is null");
+        return lookup(serviceDescriptors.getType(), serviceDescriptors.getPool());
+    }
+
+    private CheckedFuture<ServiceDescriptors, DiscoveryException> lookup(String type, String pool)
+    {
+        ImmutableList.Builder<ServiceDescriptor> serviceDescriptorBuilder = ImmutableList.builder();
+        for (Service service : Sets.union(staticStore.get(type, pool), dynamicStore.get(type, pool))) {
+            serviceDescriptorBuilder.add(
+                    new ServiceDescriptor(
+                            service.getId().get(),
+                            service.getNodeId().get().toString(),
+                            service.getType(),
+                            service.getPool(),
+                            service.getLocation(),
+                            service.getProperties()));
+        }
+        return Futures.immediateCheckedFuture(
+                new ServiceDescriptors(type, pool,
+                        serviceDescriptorBuilder.build(), DiscoveryClient.DEFAULT_DELAY, null));
     }
 }
